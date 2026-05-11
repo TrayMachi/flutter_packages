@@ -2,8 +2,6 @@ package com.appinio.socialshare.appinio_social_share;
 
 import android.app.Activity;
 import android.content.Context;
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import com.appinio.socialshare.appinio_social_share.utils.SocialShareUtil;
@@ -68,7 +66,6 @@ public class AppinioSocialSharePlugin implements FlutterPlugin, MethodCallHandle
                 result.success(response);
             }
         } catch (Exception e) {
-            Log.d("error", e.getLocalizedMessage());
             result.success(e.getLocalizedMessage());
         }
 
