@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.flutter.Log;
 import io.flutter.plugin.common.MethodChannel;
 
 public class SocialShareUtil {
@@ -245,6 +246,7 @@ public class SocialShareUtil {
         shareDialog.registerCallback(callbackManager, new FacebookCallback<Sharer.Result>() {
             @Override
             public void onSuccess(Sharer.Result result1) {
+                System.out.println("---------------onSuccess");
                 result.success(SUCCESS);
             }
 
@@ -255,6 +257,7 @@ public class SocialShareUtil {
 
             @Override
             public void onError(FacebookException error) {
+                System.out.println("---------------onError");
                 result.success(error.getLocalizedMessage());
             }
         });
@@ -357,6 +360,7 @@ public class SocialShareUtil {
             activity.startActivity(shareIntent);
             return SUCCESS;
         } catch (Exception e) {
+            e.printStackTrace();
             return e.getLocalizedMessage();
         }
     }
@@ -381,6 +385,7 @@ public class SocialShareUtil {
             activity.startActivity(shareIntent);
             return SUCCESS;
         } catch (Exception e) {
+            e.printStackTrace();
             return e.getLocalizedMessage();
         }
     }
@@ -445,6 +450,7 @@ public class SocialShareUtil {
             Bundle metaData = appInfo.metaData;
             if (metaData != null) {
                 appId = metaData.getString("com.facebook.sdk.ApplicationId");
+                Log.d("FB_APP_ID", appId);
             }
         } catch (PackageManager.NameNotFoundException e) {
             // Handle the exception if needed
