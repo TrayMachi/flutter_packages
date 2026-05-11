@@ -691,12 +691,6 @@ public class ShareUtil: NSObject, UIDocumentInteractionControllerDelegate {
             instagramDocumentInteractionController = nil
         }
     }
-
-    public func documentInteractionControllerDidDismissOptionsMenu(_ controller: UIDocumentInteractionController) {
-        if instagramDocumentInteractionController === controller {
-            instagramDocumentInteractionController = nil
-        }
-    }
     
 }
 
