@@ -91,7 +91,7 @@ public class ShareUtil: NSObject, UIDocumentInteractionControllerDelegate {
 
 
     func shareVideoToInstagramFeed(fileUrl: URL, result: @escaping FlutterResult) {
-        shareAssetToInstagramFeed(fileUrl: fileUrl, mediaType: .video, result: result)
+        shareVideoAssetToInstagramFeed(fileUrl: fileUrl, result: result)
     }
 
     func shareImageToInstagramFeed(fileUrl: URL,
@@ -205,9 +205,7 @@ public class ShareUtil: NSObject, UIDocumentInteractionControllerDelegate {
         }
     }
 
-    func shareAssetToInstagramFeed(fileUrl: URL,
-                                   mediaType: PHAssetMediaType,
-                                   result: @escaping FlutterResult) {
+    func shareVideoAssetToInstagramFeed(fileUrl: URL, result: @escaping FlutterResult) {
         guard FileManager.default.fileExists(atPath: fileUrl.path) else {
             result(ERROR)
             return
@@ -224,20 +222,10 @@ public class ShareUtil: NSObject, UIDocumentInteractionControllerDelegate {
 
                 do {
                     try PHPhotoLibrary.shared().performChangesAndWait {
-                        switch mediaType {
-                        case .image:
-                            localIdentifier = PHAssetChangeRequest
-                                .creationRequestForAssetFromImage(atFileURL: fileUrl)?
-                                .placeholderForCreatedAsset?
-                                .localIdentifier
-                        case .video:
-                            localIdentifier = PHAssetChangeRequest
-                                .creationRequestForAssetFromVideo(atFileURL: fileUrl)?
-                                .placeholderForCreatedAsset?
-                                .localIdentifier
-                        default:
-                            break
-                        }
+                        localIdentifier = PHAssetChangeRequest
+                            .creationRequestForAssetFromVideo(atFileURL: fileUrl)?
+                            .placeholderForCreatedAsset?
+                            .localIdentifier
                     }
                 } catch {
                     result(self.ERROR)
