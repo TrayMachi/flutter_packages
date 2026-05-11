@@ -6,13 +6,19 @@ import MobileCoreServices
 
 
 
-public class ShareUtil{
+public class ShareUtil: NSObject, UIDocumentInteractionControllerDelegate {
 
     public let SUCCESS: String = "SUCCESS"
     public let ERROR_APP_NOT_AVAILABLE: String = "ERROR_APP_NOT_AVAILABLE"
     public let ERROR_FEATURE_NOT_AVAILABLE_FOR_THIS_VERSON: String = "ERROR_FEATURE_NOT_AVAILABLE_FOR_THIS_VERSON"
     public let ERROR: String = "ERROR"
     public let NOT_IMPLEMENTED: String = "NOT_IMPLEMENTED"
+
+    private let instagramPhotoUTI = "com.instagram.photo"
+    private let instagramLegacyPhotoUTI = "com.instagram.exclusivegram"
+    private let instagramPhotoFileExtension = "ig"
+    private let instagramLegacyPhotoFileExtension = "igo"
+    private var instagramDocumentInteractionController: UIDocumentInteractionController?
 
     let argAttributionURL: String  = "attributionURL";
     let argImagePaths: String  = "imagePaths";
@@ -60,7 +66,11 @@ public class ShareUtil{
 
         let fileUrl = URL(fileURLWithPath: filePath)
         if isImage(filePath: filePath) {
-            shareImageToInstagramFeed(fileUrl: fileUrl, result: result)
+            shareImageToInstagramFeed(
+                fileUrl: fileUrl,
+                caption: args[argMessage] as? String,
+                result: result
+            )
         } else {
             shareVideoToInstagramFeed(fileUrl: fileUrl, result: result)
         }
@@ -84,8 +94,115 @@ public class ShareUtil{
         shareAssetToInstagramFeed(fileUrl: fileUrl, mediaType: .video, result: result)
     }
 
-    func shareImageToInstagramFeed(fileUrl: URL, result: @escaping FlutterResult) {
-        shareAssetToInstagramFeed(fileUrl: fileUrl, mediaType: .image, result: result)
+    func shareImageToInstagramFeed(fileUrl: URL,
+                                   caption: String?,
+                                   result: @escaping FlutterResult) {
+        guard FileManager.default.fileExists(atPath: fileUrl.path) else {
+            result(ERROR)
+            return
+        }
+
+        guard canOpenUrl(appName: "instagram") else {
+            result(ERROR_APP_NOT_AVAILABLE)
+            return
+        }
+
+        let shareConfigurations = [
+            (fileExtension: instagramPhotoFileExtension, uti: instagramPhotoUTI),
+            (fileExtension: instagramLegacyPhotoFileExtension, uti: instagramLegacyPhotoUTI),
+        ]
+
+        presentInstagramFeedShareSheet(
+            sourceFileUrl: fileUrl,
+            caption: caption,
+            shareConfigurations: shareConfigurations,
+            index: 0,
+            result: result
+        )
+    }
+
+    func presentInstagramFeedShareSheet(sourceFileUrl: URL,
+                                        caption: String?,
+                                        shareConfigurations: [(fileExtension: String, uti: String)],
+                                        index: Int,
+                                        result: @escaping FlutterResult) {
+        guard index < shareConfigurations.count else {
+            result(ERROR)
+            return
+        }
+
+        let shareConfiguration = shareConfigurations[index]
+        guard let shareFileUrl = copyInstagramImageForSharing(
+            sourceUrl: sourceFileUrl,
+            fileExtension: shareConfiguration.fileExtension
+        ) else {
+            presentInstagramFeedShareSheet(
+                sourceFileUrl: sourceFileUrl,
+                caption: caption,
+                shareConfigurations: shareConfigurations,
+                index: index + 1,
+                result: result
+            )
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let topViewController = UIApplication.topViewController() else {
+                result(self.ERROR)
+                return
+            }
+
+            let documentInteractionController = UIDocumentInteractionController(url: shareFileUrl)
+            documentInteractionController.delegate = self
+            documentInteractionController.uti = shareConfiguration.uti
+
+            if let caption, !caption.isEmpty {
+                documentInteractionController.annotation = ["InstagramCaption": caption]
+            }
+
+            self.instagramDocumentInteractionController = documentInteractionController
+
+            let sourceRect = CGRect(
+                x: topViewController.view.bounds.midX,
+                y: topViewController.view.bounds.midY,
+                width: 0,
+                height: 0
+            )
+
+            if documentInteractionController.presentOpenInMenu(
+                from: sourceRect,
+                in: topViewController.view,
+                animated: true
+            ) {
+                result(self.SUCCESS)
+            } else {
+                self.instagramDocumentInteractionController = nil
+                self.presentInstagramFeedShareSheet(
+                    sourceFileUrl: sourceFileUrl,
+                    caption: caption,
+                    shareConfigurations: shareConfigurations,
+                    index: index + 1,
+                    result: result
+                )
+            }
+        }
+    }
+
+    func copyInstagramImageForSharing(sourceUrl: URL, fileExtension: String) -> URL? {
+        guard let image = UIImage(contentsOfFile: sourceUrl.path),
+              let imageData = image.jpegData(compressionQuality: 1) else {
+            return nil
+        }
+
+        let shareFileUrl = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("\(UUID().uuidString).\(fileExtension)")
+
+        do {
+            try imageData.write(to: shareFileUrl, options: .atomic)
+            return shareFileUrl
+        } catch {
+            return nil
+        }
     }
 
     func shareAssetToInstagramFeed(fileUrl: URL,
@@ -578,6 +695,18 @@ public class ShareUtil{
             }
         } else {
            result(self.ERROR_APP_NOT_AVAILABLE)
+        }
+    }
+
+    public func documentInteractionControllerDidDismissOpenInMenu(_ controller: UIDocumentInteractionController) {
+        if instagramDocumentInteractionController === controller {
+            instagramDocumentInteractionController = nil
+        }
+    }
+
+    public func documentInteractionControllerDidDismissOptionsMenu(_ controller: UIDocumentInteractionController) {
+        if instagramDocumentInteractionController === controller {
+            instagramDocumentInteractionController = nil
         }
     }
     
